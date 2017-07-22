@@ -19,6 +19,9 @@ typedef struct {
 } thread_pool_t;
 
 thread_pool_t *thread_pool_create(int thread_count);
+
+int thread_pool_destroy(thread_pool_t *tp);
+
 int thread_pool_add_task(thread_pool_t *tp, \
         task_routine_t routine, void *routine_args);
 

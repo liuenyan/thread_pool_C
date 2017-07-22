@@ -13,7 +13,7 @@ int main()
     thread_pool_t *tp = thread_pool_create(4);
 
     int i = 0;
-    for(;;) {
+    while(i<1000000) {
 
         int *args = (int *)malloc(sizeof(int));
         *args = i;
@@ -24,5 +24,9 @@ int main()
         }
         i++;
     }
+    
+    //sleep(1);
+    thread_pool_destroy(tp);
+
     return 0;
 }

@@ -6,6 +6,17 @@
 
 #define ERR_EXIT(msg) do{perror(msg); exit(EXIT_FAILURE); } while(0)
 
+/*互斥锁清理函数*/
+void cleanup_mutex(void *mutex)
+{
+    pthread_mutex_unlock((pthread_mutex_t *)mutex);
+}
+
+void cleanup_args(void *args)
+{
+    free(*(void **)args);
+}
+
 /*工作线程函数*/
 static void *worker_thread(void *args)
 {
@@ -15,11 +26,13 @@ static void *worker_thread(void *args)
     struct task_queue *queue = &tp->queue;
 
     task_routine_t routine;
-    void *routine_args;
+    void *routine_args = NULL;
     
     for(;;) {
         /* 等待条件变量发生 */
         pthread_mutex_lock(mutex);
+        pthread_cleanup_push(cleanup_args, &routine_args);
+        pthread_cleanup_push(cleanup_mutex, mutex);
         while(task_queue_empty(queue)) {
             pthread_cond_wait(cond, mutex);
         }
@@ -27,11 +40,17 @@ static void *worker_thread(void *args)
         /*获取一个任务*/
         task_queue_remove_head(queue, &routine, &routine_args);
         pthread_mutex_unlock(mutex);
+        /*取消清理互斥锁的函数*/
+        pthread_cleanup_pop(0);
 
         /* 执行任务 */
         routine(routine_args);
         /* 释放参数内存 */
         free(routine_args);
+        routine_args = NULL;
+        
+        /*取消清理参数内存的函数*/
+        pthread_cleanup_pop(0);
     }
     return NULL;
 }
@@ -85,6 +104,30 @@ thread_pool_t *thread_pool_create(int thread_count)
         thread_worker_init(tp, i);
     }
     return tp;
+}
+
+int thread_pool_destroy(thread_pool_t *tp)
+{
+    int i;
+
+    /*取消线程执行*/
+    for(i=0; i<tp->thread_count; i++) {
+        pthread_cancel(tp->worker_tids[i]);
+    }
+
+    for(i=0; i<tp->thread_count; i++) {
+        pthread_join(tp->worker_tids[i], NULL);
+    }
+
+    pthread_mutex_destroy(&tp->mutex);
+    pthread_cond_destroy(&tp->cond);
+    /*清理队列*/
+    task_queue_destroy(&tp->queue);
+    /*释放内存空间*/
+    free(tp->worker_tids);
+    free(tp);
+
+    return 0;
 }
 
 /*向线程池中添加任务*/

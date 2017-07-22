@@ -41,4 +41,7 @@ int task_queue_insert_tail(struct task_queue *q,
 int task_queue_remove_head(struct task_queue *q, 
         task_routine_t *routine, void **args);
 
+/*队列销毁函数*/
+int task_queue_destroy(struct task_queue *q);
+
 #endif /* ifndef TASK_QUEUE_H */

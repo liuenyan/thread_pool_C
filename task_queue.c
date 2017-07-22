@@ -16,6 +16,18 @@ int task_queue_init(struct task_queue *q)
     return 0;
 }
 
+/*队列销毁函数*/
+int task_queue_destroy(struct task_queue *q)
+{
+    task_routine_t routine;
+    void *args;
+    while(!task_queue_empty(q)) {
+        task_queue_remove_head(q, &routine, &args);
+        free(args);
+    }
+    return 0;
+}
+
 /** 
  * 向任务队列添加一条任务, 成功返回 0, 失败返回 -1
  */
