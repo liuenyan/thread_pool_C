@@ -1,10 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "thread_worker.h"
+#include "thread_pool.h"
 
-
-void *print_func(void *args)
-{
+void *print_func(void *args) {
     printf("count is %d\n", *(int *)args);
     return NULL;
 }
@@ -16,23 +14,19 @@ int main()
     pthread_t tid = thread_worker_init(&tw);
     void *ret;
 
+    thread_pool_t *tp = thread_pool_create(4);
+
     int i = 0;
     for(;;) {
-        pthread_mutex_lock(&tw.worker_mutex);
-        if(task_queue_full(&tw.queue)) {
-            pthread_mutex_unlock(&tw.worker_mutex);
-            continue;
-        }
 
         int *args = (int *)malloc(sizeof(int));
-        *args = i++;
+        *args = i;
 
-        task_queue_insert_tail(&tw.queue, print_func, (void *)args);
-        pthread_cond_signal(&tw.worker_cond);
-        pthread_mutex_unlock(&tw.worker_mutex);
-        //usleep(10);
+        while(thread_pool_add_task(tp, print_func, args) == -1) {
+            printf("add %d failed.\n", i);
+        }
+        i++;
     }
     pthread_join(tid, &ret);
     return 0;
-
 }
